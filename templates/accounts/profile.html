@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Mi perfil | ChatApp{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/profile.css' %}">{% endblock %}
+{% block content %}
+<main class="profile-page"><header class="profile-top"><a href="{% url 'chat:home' %}" title="Volver al chat"><i class="bi bi-arrow-left"></i></a><h1>Mi perfil</h1></header><section class="profile-card"><form method="post" enctype="multipart/form-data" id="profile-form">{% csrf_token %}<div class="profile-photo-wrap">{% if profile.avatar %}<img id="profile-preview" class="profile-photo" src="{{ profile.avatar.url }}" alt="Foto de perfil">{% else %}<div id="profile-preview" class="profile-photo profile-initial">{{ request.user.username|first|upper }}</div>{% endif %}<label class="photo-button" for="avatar-input" title="Cambiar foto"><i class="bi bi-camera-fill"></i></label><input id="avatar-input" name="avatar" type="file" accept="image/*" hidden></div><div class="profile-fields"><label>Nombre<input name="display_name" value="{{ profile.display_name }}" maxlength="80" placeholder="Tu nombre visible"></label><label>Información<input name="bio" value="{{ profile.bio }}" maxlength="160" placeholder="Disponible para hablar"></label><p class="profile-hint"><i class="bi bi-clock-history"></i> Última conexión: {{ profile.last_seen|date:'d/m/Y H:i'|default:'Aún no registrada' }}</p>{% if error %}<div class="form-error">{{ error }}</div>{% endif %}<button class="save-profile" type="submit"><i class="bi bi-check2"></i> Guardar cambios</button></div></form></section></main>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/profile.js' %}"></script>{% endblock %}

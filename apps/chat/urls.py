@@ -10,4 +10,5 @@ urlpatterns = [
     path('usuarios/', views.users, name='users'),
     path('api/conversacion/', views.create_conversation, name='create_conversation'),
     path('api/conversacion/<int:conversation_id>/mensajes/', views.messages, name='messages'),
+    path('api/conversacion/<int:conversation_id>/archivo/', views.upload_attachment, name='upload_attachment'),
 ]

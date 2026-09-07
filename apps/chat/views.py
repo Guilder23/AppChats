@@ -3,19 +3,34 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django.utils import timezone
 
+from apps.accounts.models import Profile
 from .models import Conversation, Message
+
+
+def touch_profile(user):
+	profile, _ = Profile.objects.get_or_create(user=user)
+	profile.last_seen = timezone.now()
+	profile.save(update_fields=['last_seen'])
+    
 
 
 def conversation_rows(user):
 	rows = []
 	for item in user.conversations.prefetch_related('participants', 'messages'):
-		rows.append({'item': item, 'other': item.participants.exclude(id=user.id).first()})
+		other = item.participants.exclude(id=user.id).first()
+		if other:
+			Profile.objects.get_or_create(user=other)
+		rows.append({'item': item, 'other': other})
 	return rows
 
 
 @login_required
 def home(request):
+	touch_profile(request.user)
 	rows = conversation_rows(request.user)
 	return render(request, 'chat/home.html', {'conversation_rows': rows, 'selected': rows[0]['item'] if rows else None, 'selected_other': rows[0]['other'] if rows else None})
 
@@ -23,6 +38,8 @@ def home(request):
 @login_required
 def conversation(request, conversation_id):
 	item = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
+	item.messages.filter(read_at__isnull=True).exclude(sender=request.user).update(read_at=timezone.now())
+	touch_profile(request.user)
 	return render(request, 'chat/home.html', {
 		'conversation_rows': conversation_rows(request.user),
 		'selected': item,
@@ -52,5 +69,20 @@ def messages(request, conversation_id):
 	item = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
 	data = [{'id': message.id, 'body': message.body, 'sender': message.sender.username,
 			 'mine': message.sender_id == request.user.id,
-			 'time': message.created_at.strftime('%H:%M')} for message in item.messages.select_related('sender')]
+				 'time': message.created_at.strftime('%H:%M'), 'read': bool(message.read_at),
+				 'attachment': message.attachment.url if message.attachment else None} for message in item.messages.select_related('sender')]
 	return JsonResponse({'messages': data})
+
+
+@login_required
+@require_POST
+def upload_attachment(request, conversation_id):
+	item = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
+	attachment = request.FILES.get('attachment')
+	if not attachment or attachment.size > 10 * 1024 * 1024:
+		return JsonResponse({'error': 'El archivo es obligatorio y debe pesar menos de 10 MB.'}, status=400)
+	message = Message.objects.create(conversation=item, sender=request.user, body=attachment.name, attachment=attachment)
+	payload = {'id': message.id, 'body': attachment.name, 'sender': request.user.username, 'sender_id': request.user.id,
+			   'time': message.created_at.strftime('%H:%M'), 'read': False, 'attachment': message.attachment.url}
+	async_to_sync(get_channel_layer().group_send)(f'chat_{conversation_id}', {'type': 'chat_message', 'message': payload})
+	return JsonResponse(payload)
