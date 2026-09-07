@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}ChatApp | Conversaciones{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="chat-app">
+  <aside class="sidebar">
+    <header class="side-header"><div class="brand"><span class="brand-dot"><i class="bi bi-chat-heart-fill"></i></span><strong>ChatApp</strong></div><div class="header-actions"><button title="Nueva conversación" id="new-chat"><i class="bi bi-pencil-square"></i></button><a title="Salir" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right"></i></a></div></header>
+    <div class="profile-row"><div class="avatar avatar-self">{{ request.user.username|first|upper }}</div><div><strong>{{ request.user.username }}</strong><small>Disponible</small></div><span class="online-dot"></span></div>
+    <div class="search-box"><i class="bi bi-search"></i><input id="search-chats" placeholder="Buscar conversaciones" aria-label="Buscar conversaciones"></div>
+    <div class="section-label">Conversaciones <span>{{ conversation_rows|length }}</span></div>
+    <nav class="conversation-list" id="conversation-list">
+      {% for row in conversation_rows %}{% with item=row.item other=row.other %}<a class="conversation-item {% if selected and item.id == selected.id %}active{% endif %}" href="{% url 'chat:conversation' item.id %}" data-name="{{ other.username|lower }}"><div class="avatar">{{ other.username|first|upper }}</div><div class="conversation-copy"><strong>{{ other.username }}</strong><p>{% with last=item.messages.last %}{{ last.body|default:'Inicia una conversación'|truncatechars:34 }}{% endwith %}</p></div><small>{% with last=item.messages.last %}{{ last.created_at|date:'H:i' }}{% endwith %}</small></a>{% endwith %}{% empty %}<div class="empty-side">Aún no tienes conversaciones.<br>Busca a alguien para empezar.</div>{% endfor %}
+    </nav>
+    <footer class="side-footer"><span><i class="bi bi-shield-check"></i> Tus mensajes están protegidos</span></footer>
+  </aside>
+  <main class="conversation-panel">
+    {% if selected %}{% with other=selected_other %}
+    <header class="conversation-header"><button id="back-to-list" class="mobile-only" title="Volver"><i class="bi bi-arrow-left"></i></button><div class="avatar">{{ other.username|first|upper }}</div><div><h2>{{ other.username }}</h2><p id="presence"><span class="online-dot"></span> En línea</p></div><div class="conversation-actions"><button title="Buscar"><i class="bi bi-search"></i></button><button title="Más opciones"><i class="bi bi-three-dots-vertical"></i></button></div></header>
+    <section class="message-area" id="message-area" data-conversation-id="{{ selected.id }}" data-user-id="{{ request.user.id }}"><div class="date-chip">Hoy</div>{% for message in selected.messages.all %}<div class="message-row {% if message.sender_id == request.user.id %}mine{% endif %}"><div class="message-bubble">{{ message.body }}<time>{{ message.created_at|date:'H:i' }} {% if message.sender_id == request.user.id %}<i class="bi bi-check2-all"></i>{% endif %}</time></div></div>{% endfor %}</section>
+    <form class="composer" id="message-form"><button type="button" title="Adjuntar"><i class="bi bi-paperclip"></i></button><input id="message-input" autocomplete="off" placeholder="Escribe un mensaje..." maxlength="4000"><button type="submit" class="send-button" title="Enviar"><i class="bi bi-send-fill"></i></button></form>
+    {% endwith %}{% else %}<div class="no-chat"><i class="bi bi-chat-square-heart"></i><h2>Tus conversaciones, en un solo lugar.</h2><p>Selecciona una conversación o inicia un chat nuevo.</p></div>{% endif %}
+  </main>
+</div>
+<div class="modal-backdrop-custom" id="new-chat-modal" hidden><div class="new-chat-modal"><button class="close-modal" id="close-modal"><i class="bi bi-x-lg"></i></button><p class="eyebrow">NUEVO CHAT</p><h2>¿Con quién quieres hablar?</h2><input id="user-search" placeholder="Buscar usuario..."><div id="user-results"></div></div></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/chat.js' %}"></script>{% endblock %}
