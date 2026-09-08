@@ -6,6 +6,29 @@
   if (app && location.pathname.includes('/conversacion/')) app.classList.add('chat-open');
   const csrf = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
   const scroll = () => { if (area) area.scrollTop = area.scrollHeight; };
+  const updateUnread = (conversationId) => {
+    const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (!item) return;
+    let badge = item.querySelector('.unread-badge');
+    const current = Number(badge?.dataset.unread || 0) + 1;
+    if (!badge) {
+      badge = document.createElement('b');
+      badge.className = 'unread-badge';
+      item.append(badge);
+    }
+    badge.dataset.unread = current;
+    badge.textContent = current;
+    const total = document.querySelector('#unread-total');
+    if (total) total.textContent = Number(total.textContent || 0) + 1;
+  };
+  const notificationProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  const notifications = new WebSocket(`${notificationProtocol}://${location.host}/ws/notifications/`);
+  notifications.onmessage = event => {
+    const data = JSON.parse(event.data);
+    if (data.type !== 'notification' || String(data.conversation_id) === area?.dataset.conversationId) return;
+    updateUnread(data.conversation_id);
+    if ('Notification' in window && Notification.permission === 'granted') new Notification(data.sender, { body: data.body });
+  };
   const addMessage = (data) => {
     if (!area) return;
     const mine = data.sender_id === Number(area.dataset.userId);
@@ -64,6 +87,12 @@
         input.focus();
       }
     });
+    input?.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form?.requestSubmit();
+      }
+    });
     scroll();
   }
   document.querySelector('#back-to-list')?.addEventListener('click', () => {
@@ -81,8 +110,7 @@
   });
   document.querySelector('#chat-menu')?.addEventListener('click', () => window.alert('Menú del chat: puedes buscar mensajes, revisar archivos o volver a la lista.'));
   document.querySelector('#attach-file')?.addEventListener('click', () => document.querySelector('#attachment-input')?.click());
-  document.querySelector('#attachment-input')?.addEventListener('change', event => { const file = event.target.files[0]; if (file && input) input.value = `📎 ${file.name}`; });
-    document.querySelector('#attachment-input')?.addEventListener('change', async event => {
+  document.querySelector('#attachment-input')?.addEventListener('change', async event => {
       const file = event.target.files[0];
       if (!file || !area) return;
       const data = new FormData();

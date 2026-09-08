@@ -1,19 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}ChatApp | Conversaciones{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/chat.css' %}"><link rel="stylesheet" href="{% static 'css/componentes/navbar.css' %}"><link rel="stylesheet" href="{% static 'css/componentes/sidebar.css' %}"><link rel="stylesheet" href="{% static 'css/componentes/footer.css' %}">{% endblock %}
 {% block content %}
 {% csrf_token %}
 <div class="chat-app">
   <aside class="sidebar">
-    <header class="side-header"><div class="brand"><span class="brand-dot"><i class="bi bi-chat-heart-fill"></i></span><strong>ChatApp</strong></div><div class="header-actions"><button title="Nueva conversación" id="new-chat"><i class="bi bi-pencil-square"></i></button><a title="Mi perfil" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle"></i></a><a title="Salir" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right"></i></a></div></header>
-    <a class="profile-row profile-link" href="{% url 'accounts:profile' %}">{% if request.user.profile.avatar %}<img class="avatar" src="{{ request.user.profile.avatar.url }}" alt="Foto de perfil">{% else %}<div class="avatar avatar-self">{{ request.user.username|first|upper }}</div>{% endif %}<div><strong>{{ request.user.profile.name }}</strong><small>{{ request.user.profile.bio|default:'Disponible' }}</small></div><span class="online-dot"></span></a>
-    <div class="search-box"><i class="bi bi-search"></i><input id="search-chats" placeholder="Buscar conversaciones" aria-label="Buscar conversaciones"></div>
-    <div class="section-label">Conversaciones <span>{{ conversation_rows|length }}</span></div>
-    <nav class="conversation-list" id="conversation-list">
-      {% for row in conversation_rows %}{% with item=row.item other=row.other %}<a class="conversation-item {% if selected and item.id == selected.id %}active{% endif %}" href="{% url 'chat:conversation' item.id %}" data-name="{{ other.profile.name|lower }}">{% if other.profile.avatar %}<img class="avatar" src="{{ other.profile.avatar.url }}" alt="Foto de {{ other.profile.name }}">{% else %}<div class="avatar">{{ other.profile.name|first|upper }}</div>{% endif %}<div class="conversation-copy"><strong>{{ other.profile.name }}</strong><p>{% with last=item.messages.last %}{{ last.body|default:'Inicia una conversación'|truncatechars:34 }}{% endwith %}</p></div><small>{% with last=item.messages.last %}{{ last.created_at|date:'H:i' }}{% endwith %}</small></a>{% endwith %}{% empty %}<div class="empty-side">Aún no tienes conversaciones.<br>Busca a alguien para empezar.</div>{% endfor %}
-    </nav>
-    <footer class="side-footer"><span><i class="bi bi-shield-check"></i> Tus mensajes están protegidos</span></footer>
+    {% include 'componentes/navbar.html' %}
+    {% include 'componentes/sidebar.html' %}
+    {% include 'componentes/footer.html' %}
   </aside>
   <main class="conversation-panel">
     {% if selected %}{% with other=selected_other %}
@@ -25,4 +20,4 @@
 </div>
 <div class="modal-backdrop-custom" id="new-chat-modal" hidden><div class="new-chat-modal"><button class="close-modal" id="close-modal"><i class="bi bi-x-lg"></i></button><p class="eyebrow">NUEVO CHAT</p><h2>¿Con quién quieres hablar?</h2><input id="user-search" placeholder="Buscar usuario..."><div id="user-results"></div></div></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/chat.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/componentes/navbar.js' %}"></script><script src="{% static 'js/componentes/sidebar.js' %}"></script><script src="{% static 'js/componentes/footer.js' %}"></script><script src="{% static 'js/chat.js' %}"></script>{% endblock %}

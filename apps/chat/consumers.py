@@ -14,9 +14,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not self.scope['user'].is_authenticated or not await self.is_participant():
             await self.close(code=4403)
             return
-                read_ids = await self.mark_as_read()
-                if read_ids:
-                    await self.channel_layer.group_send(self.room_group_name, {'type': 'messages_read', 'ids': read_ids})
+        read_ids = await self.mark_as_read()
+        if read_ids:
+            await self.channel_layer.group_send(self.room_group_name, {'type': 'messages_read', 'ids': read_ids})
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
@@ -30,6 +30,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
         message = await self.save_message(body)
         await self.channel_layer.group_send(self.room_group_name, {'type': 'chat_message', 'message': message})
+        for user_id in await self.participant_ids():
+            if user_id != self.scope['user'].id:
+                await self.channel_layer.group_send(f'user_{user_id}', {'type': 'notification', 'message': message})
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event['message']))
@@ -46,7 +49,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = Message.objects.create(conversation_id=self.conversation_id, sender=self.scope['user'], body=body)
         Conversation.objects.filter(id=self.conversation_id).update(updated_at=message.created_at)
         return {'id': message.id, 'body': body, 'sender': self.scope['user'].username,
-                'sender_id': self.scope['user'].id, 'time': message.created_at.strftime('%H:%M'), 'read': False}
+                'sender_id': self.scope['user'].id, 'conversation_id': int(self.conversation_id), 'time': message.created_at.strftime('%H:%M'), 'read': False}
+
+    @database_sync_to_async
+    def participant_ids(self):
+        return list(Conversation.objects.get(id=self.conversation_id).participants.values_list('id', flat=True))
 
     @database_sync_to_async
     def mark_as_read(self):
@@ -54,3 +61,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if messages:
             Message.objects.filter(id__in=messages).update(read_at=timezone.now())
         return messages
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        if not self.scope['user'].is_authenticated:
+            await self.close(code=4403)
+            return
+        self.group_name = f'user_{self.scope["user"].id}'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def notification(self, event):
+        await self.send(text_data=json.dumps({'type': 'notification', **event['message']}))
