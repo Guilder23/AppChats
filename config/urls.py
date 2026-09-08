@@ -19,7 +19,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from .pwa import service_worker
+
 urlpatterns = [
+    path('sw.js', service_worker, name='service_worker'),
     path('admin/', admin.site.urls),
     path('', include('apps.accounts.urls')),
     path('chat/', include('apps.chat.urls')),
