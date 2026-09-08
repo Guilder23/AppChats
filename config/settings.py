@@ -172,3 +172,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
     CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+    if railway_domain:
+        render_origin = f'https://{railway_domain}'
+        if render_origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(render_origin)
