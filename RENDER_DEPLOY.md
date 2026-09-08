@@ -40,6 +40,8 @@ El Blueprint configura automaticamente:
 
 Si agregas un dominio propio, anade su hostname a `ALLOWED_HOSTS` y su URL completa, con `https://`, a `CSRF_TRUSTED_ORIGINS`.
 
+En un servicio creado antes de este Blueprint, revisa manualmente **Environment > Environment Variables** y agrega `REDIS_URL` con la URL interna del servicio Redis. Si `REDIS_URL` falta, la aplicación usa un canal en memoria para permitir mensajes con una sola instancia; para notificaciones entre varias instancias debes configurar Redis.
+
 ## 4. Probar la aplicación
 
 Cuando termine el deploy, abre el dominio que aparece en **Settings > Domains** y verifica:

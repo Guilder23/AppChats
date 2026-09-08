@@ -104,12 +104,21 @@ else:
         }
     }
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer' if DEBUG else 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {} if DEBUG else {'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')]},
-    },
-}
+redis_url = os.getenv('REDIS_URL') or os.getenv('REDIS_PRIVATE_URL') or os.getenv('REDIS_CONNECTION_STRING')
+if redis_url:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [redis_url]},
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+            'CONFIG': {},
+        },
+    }
 
 
 # Password validation
