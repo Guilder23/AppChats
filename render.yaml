@@ -19,7 +19,7 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://*.onrender.com"
+        value: "https://appchats-8gm3.onrender.com"
       - key: REDIS_URL
         fromService:
           type: redis
